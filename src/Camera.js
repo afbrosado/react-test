@@ -244,7 +244,7 @@ const Camera = () => {
                                             placeholder="Skanna eller mata in ID-nummer"
                                             onChange={(e) => {
                                                 if (Number.isInteger(Number(e.target.value))) {
-                                                    setBarcode(e)
+                                                    setBarcode(e.target.value)
                                                 }
 
                                             }}

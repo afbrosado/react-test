@@ -175,7 +175,7 @@ const Camera = () => {
         return () => {
             codeReader.reset();
         };
-    }, [codeReader]);
+    }, []);
 
 
     return (

@@ -130,6 +130,8 @@ const BarcodeReader = props => {
         }
     }, [selectedDeviceId]);
 
+    console.log(setSelectedDeviceId)
+
     return (
         <Grid item xs={12}>
             <video id="video" width="300" height="200"></video>

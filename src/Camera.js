@@ -130,8 +130,6 @@ const BarcodeReader = props => {
         }
     }, [selectedDeviceId]);
 
-    console.log(setSelectedDeviceId)
-
     return (
         <Grid item xs={12}>
             <video id="video" width="300" height="200"></video>
@@ -163,6 +161,7 @@ const Camera = () => {
     useEffect(() => {
         codeReader.listVideoInputDevices()
             .then(devices => {
+                console.log(devices)
                 setVideoInputDevices(devices);
                 //Set default device
                 if (devices.length > 0) {

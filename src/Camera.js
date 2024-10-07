@@ -107,119 +107,107 @@ const BarcodeReader = props => {
     const {
         handleClose,
         handleCapture,
-        selectedDeviceId,
-        videoInputDevices,
-        setSelectedDeviceId,
     } = props;
 
-    const codeReader = new BrowserMultiFormatReader();
+    const [selectedCamera, setSelectedCamera] = useState("");
 
-    const startCamera = async () => {
-
-        const constraints = {
-            video: {
-                facingMode: {exact: 'environment'}
-            }
-        };
-
+    const getBackCamerasWithZoom = async () => {
         try {
-            await codeReader.decodeFromConstraints(constraints, 'video', (result, err) => {
-                if (result) {
-                    handleCapture(result.text);
-                    codeReader.reset(); // Stop scanning after the barcode is found
-                    handleClose();
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            const videoDevices = devices.filter(
+                (device) => device.kind === "videoinput"
+            );
+
+            // Filter back-facing cameras based on the label
+            const backFacingCameras = videoDevices.filter((device) => device.label.toLowerCase().includes("back") || device.label.toLowerCase().includes("environment"));
+
+            if (backFacingCameras.length === 0) {
+                setSelectedCamera(videoDevices[0].deviceId);
+                return;
+            }
+
+            let cameraWithMaxZoom = null;
+            let maxZoomValue = 1;
+
+            // Check zoom capabilities for each back camera
+            for (let camera of backFacingCameras) {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { deviceId: { exact: camera.deviceId } },
+                });
+
+                const videoTrack = stream.getVideoTracks()[0];
+                const capabilities = videoTrack.getCapabilities();
+
+                // If the camera supports zoom, check the max zoom value
+                if (capabilities.zoom) {
+                    const currentMaxZoom = capabilities.zoom.max;
+                    if (currentMaxZoom > maxZoomValue) {
+                        maxZoomValue = currentMaxZoom;
+                        cameraWithMaxZoom = camera;
+                    }
                 }
 
-                if (err && !(err instanceof NotFoundException)) {
-                    console.error(err);
-                }
-            });
+                // Stop the video track after checking capabilities
+                videoTrack.stop();
+            }
+
+            if (cameraWithMaxZoom) {
+                setSelectedCamera(cameraWithMaxZoom.deviceId);
+            } else {
+                // Fallback to the first available camera if none support zoom
+                setSelectedCamera(backFacingCameras[0].deviceId);
+            }
         } catch (err) {
-            console.error('Error accessing the camera:', err);
-            try {
-                const fallbackConstraints = {
-                    video: true // Use the default video camera
-                };
+            console.error("Error accessing devices:", err);
+        }
+    }
 
-                await codeReader.decodeFromConstraints(fallbackConstraints, 'video', (result, err) => {
+    const startScanner = async () => {
+        const codeReader = new BrowserMultiFormatReader();
+        try {
+            await codeReader.decodeFromVideoDevice(
+                selectedCamera,
+                "video",
+                (result, err) => {
                     if (result) {
+                        console.log("Barcode detected:", result.text);
                         handleCapture(result.text);
-                        codeReader.reset(); // Stop scanning after the barcode is found
+                        codeReader.reset(); // Stop scanning after barcode detection
                         handleClose();
                     }
                     if (err && !(err instanceof NotFoundException)) {
                         console.error(err);
                     }
-                });
-            } catch (fallbackErr) {
-                console.error('Error accessing the default camera:', fallbackErr);
-
-            }
+                }
+            );
+        } catch (err) {
+            console.error("Error starting the scanner:", err);
         }
-
-        /*   codeReader.decodeFromVideoDevice(selectedDeviceId, "video", (result, err) => {
-               if(result) {
-                   handleCapture(result.text);
-                   codeReader.reset();
-                   handleClose();
-               }
-           })*/
-    }
+    };
 
     useEffect(() => {
-        startCamera();
-        return () => {
-            codeReader.reset(); // Stop the video stream when the component unmounts
-        };
+        getBackCamerasWithZoom();
     }, []);
+
+    useEffect(() => {
+        if(selectedCamera) {
+            startScanner();
+        }
+    }, [selectedCamera])
 
     return (
         <Grid item xs={12}>
             <video id="video" width="300" height="225"></video>
-
-         {/*   {videoInputDevices.length > 0 &&
-                <Select
-                    value={selectedDeviceId}
-                    onChange={e => setSelectedDeviceId(e.target.value)}
-                >
-                    {videoInputDevices.map((device, index) => (
-                        <MenuItem key={index} value={device.deviceId}>{device.label}</MenuItem>
-                    ))}
-                </Select>
-            }*/}
         </Grid>
     )
 }
 
 const Camera = () => {
     const classes = useStyles();
-    const codeReader = new BrowserMultiFormatReader();
 
     const [open, setOpen] = useState(false);
     const [isScanning, setIsScanning] = useState(false);
     const [barcode, setBarcode] = useState("");
-    const [videoInputDevices, setVideoInputDevices] = useState([]);
-    const [selectedDeviceId, setSelectedDeviceId] = useState('');
-
-    /*useEffect(() => {
-        codeReader.listVideoInputDevices()
-            .then(devices => {
-                console.log(devices)
-                setVideoInputDevices(devices);
-                //Set default device
-                if (devices.length > 0) {
-                    setSelectedDeviceId(devices[0].deviceId);
-                }
-            })
-            .catch(err => {
-                console.log("Error listing video input devices: ", err);
-            })
-
-        return () => {
-            codeReader.reset();
-        };
-    }, []);*/
-
 
     return (
         <>
@@ -242,10 +230,6 @@ const Camera = () => {
                             <BarcodeReader
                                 handleClose={() => setIsScanning(false)}
                                 handleCapture={e => setBarcode(e)}
-                               /* selectedDeviceId={selectedDeviceId}
-                                videoInputDevices={videoInputDevices}
-                                setSelectedDeviceId={setSelectedDeviceId}
-                                codeReader={codeReader}*/
                             />
                         }
                         <Grid item xs={12} md={12}>

@@ -113,9 +113,9 @@ const BarcodeReader = props => {
         setSelectedDeviceId,
     } = props;
 
+    const codeReader = new BrowserMultiFormatReader();
 
     const startCamera = async () => {
-        const codeReader = new BrowserMultiFormatReader();
 
         const constraints = {
             video: {

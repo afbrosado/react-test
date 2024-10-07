@@ -136,6 +136,25 @@ const BarcodeReader = props => {
             });
         } catch (err) {
             console.error('Error accessing the camera:', err);
+            try {
+                const fallbackConstraints = {
+                    video: true // Use the default video camera
+                };
+
+                await codeReader.decodeFromConstraints(fallbackConstraints, 'video', (result, err) => {
+                    if (result) {
+                        handleCapture(result.text);
+                        codeReader.reset(); // Stop scanning after the barcode is found
+                        handleClose();
+                    }
+                    if (err && !(err instanceof NotFoundException)) {
+                        console.error(err);
+                    }
+                });
+            } catch (fallbackErr) {
+                console.error('Error accessing the default camera:', fallbackErr);
+
+            }
         }
 
         /*   codeReader.decodeFromVideoDevice(selectedDeviceId, "video", (result, err) => {

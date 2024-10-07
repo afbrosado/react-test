@@ -114,27 +114,52 @@ const BarcodeReader = props => {
     } = props;
 
 
-    const startCamera = () => {
-        codeReader.decodeFromVideoDevice(selectedDeviceId, "video", (result, err) => {
-            if(result) {
-                handleCapture(result.text);
-                codeReader.reset();
-                handleClose();
+    const startCamera = async () => {
+        const codeReader = new BrowserMultiFormatReader();
+
+        const constraints = {
+            video: {
+                facingMode: {exact: 'environment'}
             }
-        })
+        };
+
+        try {
+            await codeReader.decodeFromConstraints(constraints, 'video', (result, err) => {
+                if (result) {
+                    handleCapture(result.text);
+                    codeReader.reset(); // Stop scanning after the barcode is found
+                    handleClose();
+                }
+
+                if (err && !(err instanceof NotFoundException)) {
+                    console.error(err);
+                }
+            });
+        } catch (err) {
+            console.error('Error accessing the camera:', err);
+        }
+
+        /*   codeReader.decodeFromVideoDevice(selectedDeviceId, "video", (result, err) => {
+               if(result) {
+                   handleCapture(result.text);
+                   codeReader.reset();
+                   handleClose();
+               }
+           })*/
     }
 
     useEffect(() => {
-        if (selectedDeviceId) {
-            startCamera();
-        }
-    }, [selectedDeviceId]);
+        startCamera();
+        return () => {
+            codeReader.reset(); // Stop the video stream when the component unmounts
+        };
+    }, []);
 
     return (
         <Grid item xs={12}>
-            <video id="video" width="300" height="200"></video>
+            <video id="video" width="300" height="225"></video>
 
-            {videoInputDevices.length > 0 &&
+         {/*   {videoInputDevices.length > 0 &&
                 <Select
                     value={selectedDeviceId}
                     onChange={e => setSelectedDeviceId(e.target.value)}
@@ -143,7 +168,7 @@ const BarcodeReader = props => {
                         <MenuItem key={index} value={device.deviceId}>{device.label}</MenuItem>
                     ))}
                 </Select>
-            }
+            }*/}
         </Grid>
     )
 }
@@ -158,7 +183,7 @@ const Camera = () => {
     const [videoInputDevices, setVideoInputDevices] = useState([]);
     const [selectedDeviceId, setSelectedDeviceId] = useState('');
 
-    useEffect(() => {
+    /*useEffect(() => {
         codeReader.listVideoInputDevices()
             .then(devices => {
                 console.log(devices)
@@ -175,7 +200,7 @@ const Camera = () => {
         return () => {
             codeReader.reset();
         };
-    }, []);
+    }, []);*/
 
 
     return (
@@ -199,10 +224,10 @@ const Camera = () => {
                             <BarcodeReader
                                 handleClose={() => setIsScanning(false)}
                                 handleCapture={e => setBarcode(e)}
-                                selectedDeviceId={selectedDeviceId}
+                               /* selectedDeviceId={selectedDeviceId}
                                 videoInputDevices={videoInputDevices}
                                 setSelectedDeviceId={setSelectedDeviceId}
-                                codeReader={codeReader}
+                                codeReader={codeReader}*/
                             />
                         }
                         <Grid item xs={12} md={12}>

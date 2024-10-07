@@ -105,7 +105,6 @@ const useStyles = makeStyles(theme => ({
 
 const BarcodeReader = props => {
     const {
-        codeReader,
         handleClose,
         handleCapture,
         selectedDeviceId,
